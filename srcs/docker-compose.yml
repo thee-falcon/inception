@@ -1,0 +1,82 @@
+services:
+# mariadb: MYSQL Database
+  mariadb:
+  # specifies the build context for the Dockerfile
+    build:
+    # context: specifies the directory where the Dockerfile is located
+      context: .
+      dockerfile: requirements/mariadb/Dockerfile
+      # specifies the name of the container
+    container_name: mariadb
+    # sonnects the container to the inception network
+    networks:
+      - inception
+    # loads the environment variables from the .env file
+    env_file:
+      - .env
+    # restarts the container automatically if it stops
+    restart: always
+    # mounts the mariadb_data volume to the /var/lib/mysql directory in the container
+    volumes:
+      - mariadb_data:/var/lib/mysql
+# a web server that serves the WordPress
+  nginx:
+    build: 
+      context: .
+      dockerfile: requirements/nginx/Dockerfile
+    container_name: nginx
+    networks:
+      - inception
+    # ensures that the nginx container starts only after the wordpress container is up and running
+    depends_on:
+      - wordpress
+    env_file:
+      - .env
+    # exposes port 443 on the host machine, mapping it to port 443 on the container
+    ports:
+      - "443:443"
+    volumes:
+      - wordpress_files:/var/www/html
+    restart: always
+# a content management system
+  wordpress:
+    build: 
+      context: .
+      dockerfile: requirements/wordpress/Dockerfile
+    container_name: wordpress
+    env_file:
+      - .env
+    networks:
+      - inception
+    # ensures that the wordpress container starts only after the mariadb container is up and running
+    depends_on:
+      - mariadb
+    restart: always
+    volumes:
+      - wordpress_files:/var/www/html
+# defines the networks that allows the services to communicate with each other
+networks:
+    inception:
+        # using bridge driver, which creates a private internal network on the Docker host
+        driver: bridge
+# defines the volumes that are used to persist the data
+volumes:
+  mariadb_data:
+    # driver local, which is the default driver for volumes
+    driver: local
+    # options for configuring the volume
+    driver_opts:
+      # no specific file system type, for example (none for the host's native file system)
+      type: none
+      # specifies the path on the host machine where the volume's data will be stored
+      device: /home/omkran/data/mariadb
+      # 'o' option with bind, which mounts the volume to the specified path
+      # the directory on the host (/home/omkran/data/mariadb) will be mapped directly to the container's file system
+      o: bind
+
+  wordpress_files:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/omkran/data/wordpress
+      o: bind
