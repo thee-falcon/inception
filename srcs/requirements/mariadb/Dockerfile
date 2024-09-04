@@ -1,4 +1,4 @@
-FROM alpine:3.18
+FROM alpine:3.14
 
 # the deafult port for MySQL/MariaDB.
 EXPOSE 3306
